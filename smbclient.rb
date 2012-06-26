@@ -3,6 +3,7 @@
 require "rubygems"
 require "socket"
 require "hexdump"
+require "ap"
 
 def netbios_encap(payload)
   [payload.length & 0x00ffffff, payload].pack("Na*")
@@ -40,6 +41,36 @@ def make_smb(header)
 
 end
 
+def parse_smb(packet)
+
+  protocol, cmd, status, flags, flags2, pid_high, sig, tid, pid_low, \
+	uid, mid, wct, payload = packet.unpack("a4cVcvva8xxvvvvCa*")
+
+  words, bct, bytes = payload.unpack("a#{wct*2}va*")
+
+  {
+    protocol: protocol,
+    cmd: cmd,
+    status: status,
+    flags: flags,
+    flags2: flags2,
+    pid: (pid_high << 16) & pid_low,
+    tid: tid,
+    uid: uid,
+    mid: mid,
+    wct: wct,
+    words: words,
+    bct: bct,
+    bytes: bytes 
+  } 
+
+end
+
+def parse_netbios(packet)
+  length, payload = packet.unpack("Na*")
+  parse_smb(payload)
+end
+
 negprot_request = { 
   cmd: 0x72,
   ntstatus: 0x00000000,
@@ -53,9 +84,25 @@ negprot_request = {
   words: ""
 }
 
+# Connect
+
+sock = TCPSocket.open("localhost", 445)
+
+# Send negprot request
+
 packet = netbios_encap(make_smb(negprot_request))
 puts packet.hexdump
 
-sock = TCPSocket.open("localhost", 445)
 sock.write(packet)
-puts sock.recv(100).hexdump
+
+# Receive reply
+
+response = sock.recv(4)
+len = response.unpack("N")[0]
+
+response += sock.read(len) 
+puts response.hexdump
+
+# Parse negprot response
+
+ap parse_netbios(response)
