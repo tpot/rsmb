@@ -2,8 +2,8 @@ require "rsmb/smb"
 
 class NegprotRequest
 
-  def command
-    SMB_COM_NEGPROT
+  def command 
+    SMB::Commands::NEGPROT
   end
 
   def words
