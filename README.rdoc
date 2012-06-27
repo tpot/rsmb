@@ -1,0 +1,27 @@
+= rsmb
+
+* {Homepage}[https://rubygems.org/gems/rsmb]
+* {Documentation}[http://rubydoc.info/gems/rsmb/frames]
+* {Email}[mailto:tpot at frungy.org]
+
+== Description
+
+TODO: Description
+
+== Features
+
+== Examples
+
+  require 'rsmb'
+
+== Requirements
+
+== Install
+
+  $ gem install rsmb
+
+== Copyright
+
+Copyright (c) 2012 Tim Potter
+
+See LICENSE.txt for details.
