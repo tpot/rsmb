@@ -5,7 +5,7 @@ require "socket"
 require "hexdump"
 require "ap"
 
-def netbios_encap(payload)
+def make_netbios(payload)
   [payload.length & 0x00ffffff, payload].pack("Na*")
 end
 
@@ -67,8 +67,14 @@ def parse_smb(packet)
 end
 
 def parse_netbios(packet)
+
   length, payload = packet.unpack("Na*")
-  parse_smb(payload)
+
+  {
+    length: length,
+    payload: payload
+  }
+
 end
 
 negprot_request = { 
@@ -90,7 +96,7 @@ sock = TCPSocket.open("localhost", 445)
 
 # Send negprot request
 
-packet = netbios_encap(make_smb(negprot_request))
+packet = make_netbios(make_smb(negprot_request))
 puts packet.hexdump
 
 sock.write(packet)
@@ -105,4 +111,4 @@ puts response.hexdump
 
 # Parse negprot response
 
-ap parse_netbios(response)
+ap parse_smb(parse_netbios(response)[:payload])
