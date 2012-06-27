@@ -5,8 +5,12 @@ require "socket"
 require "hexdump"
 require "ap"
 require "rsmb/netbios"
+require "rsmb/negprot"
 
-def make_smb(header)
+def make_smb(header, smb)
+
+  words = (smb.words || "")
+  bytes = (smb.bytes || "")
 
   smb_packet = [
 
@@ -14,7 +18,7 @@ def make_smb(header)
 
     "\xffSMB", 					# protocol
 
-    header[:cmd], 				# command
+    smb.command, 				# command
     header[:ntstatus], 				# status
     header[:flags], header[:flags2], 		# flags
 
@@ -28,11 +32,11 @@ def make_smb(header)
 
     # Payload
     
-    header[:words].length / 2, 				# word count
-    header[:words],					# parameter words
+    words.length / 2, 			# word count
+    words,					# parameter words
 
-    header[:bytes].length, 				# byte count
-    header[:bytes]					# bytes
+    bytes.length, 				# byte count
+    bytes					# bytes
 
   ].pack("a4cVcvva8xxvvvvca*va*")
 
@@ -63,17 +67,14 @@ def parse_smb(packet)
 
 end
 
-negprot_request = { 
-  cmd: 0x72,
+header  = { 
   ntstatus: 0x00000000,
   flags: 0x08,
   flags2: 0xc801,
   pid: 1,
   tid: 0xffff,
   uid: 0xffff,
-  mid:0,
-  bytes: "\x02NT LM 0.12\0",
-  words: ""
+  mid:0
 }
 
 # Connect
@@ -82,7 +83,7 @@ sock = TCPSocket.open("localhost", 445)
 
 # Send negprot request
 
-packet = make_netbios(make_smb(negprot_request))
+packet = make_netbios(make_smb(header, NegprotRequest.new))
 puts packet.hexdump
 
 sock.write(packet)
@@ -97,4 +98,6 @@ puts response.hexdump
 
 # Parse negprot response
 
-ap parse_smb(parse_netbios(response)[:payload])
+smb = parse_smb(parse_netbios(response)[:payload])
+
+ap NegprotResponse.new(smb[:words], smb[:bytes])
