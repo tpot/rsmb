@@ -4,10 +4,7 @@ require "rubygems"
 require "socket"
 require "hexdump"
 require "ap"
-
-def make_netbios(payload)
-  [payload.length & 0x00ffffff, payload].pack("Na*")
-end
+require "rsmb/netbios"
 
 def make_smb(header)
 
@@ -63,17 +60,6 @@ def parse_smb(packet)
     bct: bct,
     bytes: bytes 
   } 
-
-end
-
-def parse_netbios(packet)
-
-  length, payload = packet.unpack("Na*")
-
-  {
-    length: length,
-    payload: payload
-  }
 
 end
 
