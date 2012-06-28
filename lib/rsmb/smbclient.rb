@@ -6,6 +6,28 @@ require "hexdump"
 require "ap"
 require "rsmb/netbios"
 require "rsmb/negprot"
+require "rsmb/sesssetupx"
+
+def read_response(sock)
+
+  puts "<<< receiving"
+
+  response = sock.recv(4)
+  len = response.unpack("N")[0]
+
+  response += sock.read(len) 
+  puts response.hexdump
+
+  response
+end
+
+def send_request(sock, packet)
+
+  puts ">>> sending"
+
+  puts packet.hexdump
+  sock.write(packet)
+end
 
 def make_smb(header, smb)
 
@@ -32,7 +54,7 @@ def make_smb(header, smb)
 
     # Payload
     
-    words.length / 2, 			# word count
+    words.length / 2, 				# word count
     words,					# parameter words
 
     bytes.length, 				# byte count
@@ -74,30 +96,29 @@ header  = {
   pid: 1,
   tid: 0xffff,
   uid: 0xffff,
-  mid:0
+  mid: 0
 }
 
 # Connect
 
 sock = TCPSocket.open("localhost", 445)
 
-# Send negprot request
+# Negprot
 
 packet = make_netbios(make_smb(header, NegprotRequest.new))
-puts packet.hexdump
+send_request(sock, packet)
 
-sock.write(packet)
-
-# Receive reply
-
-response = sock.recv(4)
-len = response.unpack("N")[0]
-
-response += sock.read(len) 
-puts response.hexdump
-
-# Parse negprot response
+response = read_response(sock)
 
 smb = parse_smb(parse_netbios(response)[:payload])
-
 ap NegprotResponse.new(smb[:words], smb[:bytes])
+
+# Session setup
+
+packet = make_netbios(make_smb(header, SessionSetupAndXRequest.new))
+send_request(sock, packet)
+
+response = read_response(sock)
+
+smb = parse_smb(parse_netbios(response)[:payload])
+ap SessionSetupAndXResponse.new(smb[:words], smb[:bytes])

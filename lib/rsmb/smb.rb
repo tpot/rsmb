@@ -35,7 +35,8 @@ module SMB
 
   module Commands
 
-    NEGPROT = 0x72
+    NEGPROT    = 0x72
+    SESSSETUPX = 0x73
 
   end
 
